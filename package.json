@@ -1,0 +1,42 @@
+{
+  "name": "nayo-water-monitoring",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "backend": "node backend/app.js",
+    "simulator": "node iot-simulator/simulateur-capteurs.js"
+  },
+  "dependencies": {
+    "@types/leaflet": "^1.9.16",
+    "@types/node": "^20.17.22",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "axios": "^1.8.1",
+    "chart.js": "^4.4.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.263.1",
+    "mongoose": "^7.8.6",
+    "next": "^13.5.8",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^18.3.1",
+    "react-leaflet": "^4.2.1",
+    "recharts": "^2.15.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.8.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27",
+    "tailwindcss": "^3.3.3"
+  }
+}
