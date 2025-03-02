@@ -9,6 +9,7 @@ const capteurSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
+    enum: ["DEBIT", "PRESSION", "NIVEAU_EAU"],
   },
   localisation: {
     latitude: Number,
@@ -21,6 +22,14 @@ const capteurSchema = new mongoose.Schema({
     },
     valeur: Number,
     unite: String,
+  },
+  estActif: {
+    type: Boolean,
+    default: true,
+  },
+  pompeId: {
+    type: String,
+    required: true,
   },
 })
 

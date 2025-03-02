@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { AlertTriangle, AlertCircle, AlertOctagon } from "lucide-react"
+import io from "socket.io-client"
 
 interface Alerte {
   id: string
@@ -9,36 +10,23 @@ interface Alerte {
   message: string
   niveau: "BASSE" | "MOYENNE" | "HAUTE" | "CRITIQUE"
   dateCreation: string
+  capteurId: string
+  pompeId: string
 }
 
 export default function Alertes() {
   const [alertes, setAlertes] = useState<Alerte[]>([])
 
   useEffect(() => {
-    // Simuler le chargement des alertes
-    setAlertes([
-      {
-        id: "ALERTE001",
-        type: "DEPASSEMENT_SEUIL",
-        message: "Niveau d'eau élevé sur CAPTEUR001",
-        niveau: "HAUTE",
-        dateCreation: "2023-07-15T10:30:00Z",
-      },
-      {
-        id: "ALERTE002",
-        type: "BATTERIE_FAIBLE",
-        message: "Batterie faible sur CAPTEUR002",
-        niveau: "MOYENNE",
-        dateCreation: "2023-07-15T09:45:00Z",
-      },
-      {
-        id: "ALERTE003",
-        type: "PANNE_CAPTEUR",
-        message: "CAPTEUR003 ne répond pas",
-        niveau: "CRITIQUE",
-        dateCreation: "2023-07-15T08:15:00Z",
-      },
-    ])
+    const socket = io("http://localhost:3001")
+
+    socket.on("nouvelleAlerte", (alerte: Alerte) => {
+      setAlertes((prev) => [alerte, ...prev])
+    })
+
+    return () => {
+      socket.disconnect()
+    }
   }, [])
 
   const getAlertIcon = (niveau: Alerte["niveau"]) => {
@@ -69,23 +57,29 @@ export default function Alertes() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Alertes</h1>
+      <h1 className="text-3xl font-bold mb-6 text-nayo-700">Alertes</h1>
 
       <div className="space-y-4">
         {alertes.map((alerte) => (
-          <div key={alerte.id} className={`flex items-center p-4 rounded-lg ${getAlertColor(alerte.niveau)}`}>
+          <div
+            key={alerte.id}
+            className={`flex items-center p-4 rounded-lg ${getAlertColor(alerte.niveau)} transition-all duration-300 hover:shadow-md`}
+          >
             {getAlertIcon(alerte.niveau)}
-            <div className="ml-3">
+            <div className="ml-3 flex-grow">
               <p className="font-semibold">{alerte.type}</p>
               <p className="text-sm">{alerte.message}</p>
               <p className="text-xs mt-1">{new Date(alerte.dateCreation).toLocaleString()}</p>
             </div>
-            <span
-              className="ml-auto px-2 py-1 text-xs font-semibold rounded-full bg-opacity-50"
-              style={{ backgroundColor: `var(--${getAlertColor(alerte.niveau).split(" ")[0].slice(3)})` }}
-            >
-              {alerte.niveau}
-            </span>
+            <div className="ml-auto">
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getAlertColor(alerte.niveau)}`}>
+                {alerte.niveau}
+              </span>
+            </div>
+            <div className="ml-4 text-right">
+              <p className="text-xs">Pompe: {alerte.pompeId}</p>
+              <p className="text-xs">Capteur: {alerte.capteurId}</p>
+            </div>
           </div>
         ))}
       </div>

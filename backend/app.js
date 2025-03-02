@@ -23,8 +23,8 @@ app.use(express.json())
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("Could not connect to MongoDB", err))
+  .then(() => console.log("Connecté à MongoDB"))
+  .catch((err) => console.error("Impossible de se connecter à MongoDB", err))
 
 // Routes
 const capteurRoutes = require("./routes/capteurRoutes")
@@ -35,18 +35,33 @@ app.use("/api/alertes", alerteRoutes)
 
 // Socket.IO
 io.on("connection", (socket) => {
-  console.log("New client connected")
+  console.log("Nouveau client connecté")
 
   socket.on("disconnect", () => {
-    console.log("Client disconnected")
+    console.log("Client déconnecté")
   })
 })
 
-// Export io to use in routes
+// Middleware de gestion des erreurs
+app.use((err, req, res, next) => {
+  console.error(err.stack)
+  res.status(500).send("Une erreur est survenue !")
+})
+
+// Export io pour l'utiliser dans les routes
 module.exports.io = io
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 5000
+
+// Vérifier si le port est déjà utilisé avant de démarrer le serveur
+server.on("error", (e) => {
+  if (e.code === "EADDRINUSE") {
+    console.error(`Le port ${PORT} est déjà utilisé. Veuillez choisir un port différent.`)
+    process.exit(1)
+  }
+})
+
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+  console.log(`Serveur en cours d'exécution sur le port ${PORT}`)
 })
 

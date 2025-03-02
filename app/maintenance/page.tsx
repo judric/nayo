@@ -1,46 +1,39 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Calendar, PenToolIcon as Tool, CheckCircle, XCircle } from "lucide-react"
+import { Calendar, PenToolIcon as Tool, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
+import io from "socket.io-client"
 
 interface MaintenanceTask {
   id: string
   description: string
   date: string
   status: "PLANIFIEE" | "EN_COURS" | "TERMINEE" | "ANNULEE"
+  pompeId: string
+}
+
+interface PompeStatus {
+  id: string
+  nom: string
+  etat: "NORMAL" | "ATTENTION" | "CRITIQUE"
+  derniereMaintenance: string
 }
 
 export default function Maintenance() {
   const [tasks, setTasks] = useState<MaintenanceTask[]>([])
+  const [pompes, setPompes] = useState<PompeStatus[]>([])
 
   useEffect(() => {
-    // Simuler le chargement des tâches de maintenance
-    setTasks([
-      {
-        id: "TASK001",
-        description: "Nettoyage des filtres sur CAPTEUR001",
-        date: "2023-07-20T09:00:00Z",
-        status: "PLANIFIEE",
-      },
-      {
-        id: "TASK002",
-        description: "Remplacement de la batterie sur CAPTEUR002",
-        date: "2023-07-18T14:30:00Z",
-        status: "EN_COURS",
-      },
-      {
-        id: "TASK003",
-        description: "Calibration de CAPTEUR003",
-        date: "2023-07-15T10:00:00Z",
-        status: "TERMINEE",
-      },
-      {
-        id: "TASK004",
-        description: "Mise à jour du firmware sur CAPTEUR004",
-        date: "2023-07-22T11:00:00Z",
-        status: "PLANIFIEE",
-      },
-    ])
+    const socket = io("http://localhost:3001")
+
+    socket.on("maintenanceUpdate", (data: { tasks: MaintenanceTask[]; pompes: PompeStatus[] }) => {
+      setTasks(data.tasks)
+      setPompes(data.pompes)
+    })
+
+    return () => {
+      socket.disconnect()
+    }
   }, [])
 
   const getStatusIcon = (status: MaintenanceTask["status"]) => {
@@ -69,26 +62,55 @@ export default function Maintenance() {
     }
   }
 
+  const getPompeStatusIcon = (etat: PompeStatus["etat"]) => {
+    switch (etat) {
+      case "NORMAL":
+        return <CheckCircle className="h-6 w-6 text-green-500" />
+      case "ATTENTION":
+        return <AlertTriangle className="h-6 w-6 text-yellow-500" />
+      case "CRITIQUE":
+        return <XCircle className="h-6 w-6 text-red-500" />
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Maintenance</h1>
+      <h1 className="text-3xl font-bold mb-6 text-nayo-700">Maintenance</h1>
 
-      <div className="space-y-4">
-        {tasks.map((task) => (
-          <div key={task.id} className={`flex items-center p-4 rounded-lg ${getStatusColor(task.status)}`}>
-            {getStatusIcon(task.status)}
-            <div className="ml-3">
-              <p className="font-semibold">{task.description}</p>
-              <p className="text-sm">{new Date(task.date).toLocaleString()}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-4">État des Pompes</h2>
+          {pompes.map((pompe) => (
+            <div key={pompe.id} className="flex items-center justify-between mb-4 p-4 bg-gray-100 rounded-lg">
+              <div>
+                <p className="font-semibold">{pompe.nom}</p>
+                <p className="text-sm text-gray-600">
+                  Dernière maintenance: {new Date(pompe.derniereMaintenance).toLocaleDateString()}
+                </p>
+              </div>
+              {getPompeStatusIcon(pompe.etat)}
             </div>
-            <span
-              className="ml-auto px-2 py-1 text-xs font-semibold rounded-full bg-opacity-50"
-              style={{ backgroundColor: `var(--${getStatusColor(task.status).split(" ")[0].slice(3)})` }}
-            >
-              {task.status}
-            </span>
+          ))}
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-2xl font-semibold mb-4">Tâches de Maintenance</h2>
+          <div className="space-y-4">
+            {tasks.map((task) => (
+              <div key={task.id} className={`flex items-center p-4 rounded-lg ${getStatusColor(task.status)}`}>
+                {getStatusIcon(task.status)}
+                <div className="ml-3">
+                  <p className="font-semibold">{task.description}</p>
+                  <p className="text-sm">{new Date(task.date).toLocaleString()}</p>
+                  <p className="text-xs mt-1">Pompe: {task.pompeId}</p>
+                </div>
+                <span className={`ml-auto px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(task.status)}`}>
+                  {task.status}
+                </span>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
     </div>
   )

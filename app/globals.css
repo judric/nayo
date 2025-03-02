@@ -63,3 +63,7 @@
   height: 400px;
 }
 
+.wave-animation {
+  animation: wave 2s ease-in-out infinite;
+}
+

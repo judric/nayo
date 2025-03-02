@@ -3,88 +3,97 @@ const router = express.Router()
 const Capteur = require("../models/capteur")
 const { io } = require("../app")
 
-// Get all capteurs
-router.get("/", async (req, res) => {
+// Obtenir tous les capteurs
+router.get("/", async (req, res, next) => {
   try {
     const capteurs = await Capteur.find()
     res.json(capteurs)
   } catch (err) {
-    res.status(500).json({ message: err.message })
+    next(err)
   }
 })
 
-// Get one capteur
-router.get("/:id", getCapteur, (req, res) => {
-  res.json(res.capteur)
-})
-
-// Create one capteur
-router.post("/", async (req, res) => {
-  const capteur = new Capteur({
-    idAppareil: req.body.idAppareil,
-    type: req.body.type,
-    localisation: req.body.localisation,
-    derniereMesure: req.body.derniereMesure,
-  })
-
+// Obtenir un capteur spécifique
+router.get("/:id", async (req, res, next) => {
   try {
-    const newCapteur = await capteur.save()
-    io.emit("capteurUpdate", newCapteur)
-    res.status(201).json(newCapteur)
-  } catch (err) {
-    res.status(400).json({ message: err.message })
-  }
-})
-
-// Update one capteur
-router.patch("/:id", getCapteur, async (req, res) => {
-  if (req.body.idAppareil != null) {
-    res.capteur.idAppareil = req.body.idAppareil
-  }
-  if (req.body.type != null) {
-    res.capteur.type = req.body.type
-  }
-  if (req.body.localisation != null) {
-    res.capteur.localisation = req.body.localisation
-  }
-  if (req.body.derniereMesure != null) {
-    res.capteur.derniereMesure = req.body.derniereMesure
-  }
-
-  try {
-    const updatedCapteur = await res.capteur.save()
-    io.emit("capteurUpdate", updatedCapteur)
-    res.json(updatedCapteur)
-  } catch (err) {
-    res.status(400).json({ message: err.message })
-  }
-})
-
-// Delete one capteur
-router.delete("/:id", getCapteur, async (req, res) => {
-  try {
-    await res.capteur.remove()
-    io.emit("capteurDelete", res.capteur.id)
-    res.json({ message: "Capteur supprimé" })
-  } catch (err) {
-    res.status(500).json({ message: err.message })
-  }
-})
-
-async function getCapteur(req, res, next) {
-  let capteur
-  try {
-    capteur = await Capteur.findById(req.params.id)
-    if (capteur == null) {
+    const capteur = await Capteur.findById(req.params.id)
+    if (!capteur) {
       return res.status(404).json({ message: "Capteur non trouvé" })
     }
+    res.json(capteur)
   } catch (err) {
-    return res.status(500).json({ message: err.message })
+    next(err)
   }
+})
 
-  res.capteur = capteur
-  next()
-}
+// Obtenir les capteurs par pompe
+router.get("/pompe/:pompeId", async (req, res, next) => {
+  try {
+    const capteurs = await Capteur.find({ pompeId: req.params.pompeId })
+    res.json(capteurs)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Créer ou mettre à jour un capteur
+router.post("/", async (req, res, next) => {
+  try {
+    const { idAppareil, type, localisation, derniereMesure, estActif, pompeId } = req.body
+
+    if (!pompeId) {
+      return res.status(400).json({ message: "Le champ 'pompeId' est requis." })
+    }
+
+    console.log("Données reçues:", req.body)
+
+    const capteur = await Capteur.findOneAndUpdate(
+      { idAppareil },
+      { idAppareil, type, localisation, derniereMesure, estActif, pompeId },
+      { upsert: true, new: true, runValidators: true },
+    )
+
+    io.emit("capteurUpdate", capteur)
+    res.status(201).json(capteur)
+  } catch (err) {
+    console.error("Erreur lors de la création/mise à jour du capteur:", err)
+    next(err)
+  }
+})
+
+// Mettre à jour un capteur spécifique
+router.patch("/:id", async (req, res, next) => {
+  try {
+    const capteur = await Capteur.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
+    if (!capteur) {
+      return res.status(404).json({ message: "Capteur non trouvé" })
+    }
+    io.emit("capteurUpdate", capteur)
+    res.json(capteur)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Supprimer un capteur
+router.delete("/:id", async (req, res, next) => {
+  try {
+    const capteur = await Capteur.findByIdAndDelete(req.params.id)
+    if (!capteur) {
+      return res.status(404).json({ message: "Capteur non trouvé" })
+    }
+    io.emit("capteurDelete", req.params.id)
+    res.json({ message: "Capteur supprimé" })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// Middleware de gestion des erreurs
+router.use((err, req, res, next) => {
+  console.error(err.stack)
+  res.status(500).json({ message: "Une erreur est survenue sur le serveur", error: err.message })
+})
 
 module.exports = router
 
